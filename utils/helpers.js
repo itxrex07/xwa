@@ -1,4 +1,7 @@
 class Helpers {
+  /**
+   * Enhanced smart error respond that handles both text and media responses
+   */
   static async smartErrorRespond(bot, originalMsg, options = {}) {
     const {
       actionFn = () => { throw new Error('No action provided'); },
@@ -26,6 +29,18 @@ class Helpers {
     try {
       const result = await actionFn();
 
+      // Check if result is a media object (has media properties)
+      if (this.isMediaResult(result)) {
+        // Delete the processing message
+        await bot.sock.sendMessage(jid, {
+          delete: procKey
+        });
+        
+        // Send the media message
+        await bot.sock.sendMessage(jid, result);
+        return result;
+      }
+
       await bot.sock.sendMessage(jid, {
         text: typeof result === 'string'
           ? result
@@ -46,6 +61,67 @@ class Helpers {
     }
 
 
+  }
+
+  /**
+   * Check if a result object contains media properties
+   */
+  static isMediaResult(result) {
+    if (!result || typeof result !== 'object') return false;
+    
+    const mediaKeys = ['image', 'video', 'audio', 'document', 'sticker'];
+    return mediaKeys.some(key => result.hasOwnProperty(key));
+  }
+
+  /**
+   * Alternative smart processing specifically for media commands
+   */
+  static async smartMediaRespond(bot, originalMsg, options = {}) {
+    const {
+      actionFn = () => { throw new Error('No action provided'); },
+      processingText = '⏳ Processing...',
+      errorText = '❌ Something went wrong.',
+      successText = '✅ Media processed successfully!'
+    } = options;
+
+    if (!bot?.sock?.sendMessage || !originalMsg?.key?.remoteJid) return;
+
+    const jid = originalMsg.key.remoteJid;
+    
+    // Send processing message
+    const processingMsg = await bot.sock.sendMessage(jid, { text: processingText });
+
+    try {
+      const result = await actionFn();
+
+      // Delete processing message
+      await bot.sock.sendMessage(jid, {
+        delete: processingMsg.key
+      });
+
+      // If result is media object, send it directly
+      if (this.isMediaResult(result)) {
+        await bot.sock.sendMessage(jid, result);
+      } else if (typeof result === 'string' && result.trim()) {
+        // If result is text, send it
+        await bot.sock.sendMessage(jid, { text: result });
+      } else {
+        // Send success message if no specific result
+        await bot.sock.sendMessage(jid, { text: successText });
+      }
+
+      return result;
+
+    } catch (error) {
+      // Edit processing message to show error
+      await bot.sock.sendMessage(jid, {
+        text: `${errorText}${error.message ? `\n\n🔍 ${error.message}` : ''}`,
+        edit: processingMsg.key
+      });
+
+      error._handledBySmartError = true;
+      throw error;
+    }
   }
 
   static async sendCommandResponse(bot, originalMsg, responseText) {

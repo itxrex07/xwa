@@ -130,6 +130,27 @@ class CoreModule {
                     errorText: '❌ Shell command failed'
                 },
                 execute: this.runShell.bind(this)
+            },
+            {
+                name: 'resend',
+                description: 'Request placeholder message resend',
+                usage: '.resend (reply to message)',
+                permissions: 'owner',
+                execute: this.requestResend.bind(this)
+            },
+            {
+                name: 'history',
+                description: 'Fetch message history',
+                usage: '.history [count] (reply to message)',
+                permissions: 'owner',
+                execute: this.fetchHistory.bind(this)
+            },
+            {
+                name: 'typing',
+                description: 'Send message with typing indicator',
+                usage: '.typing <message>',
+                permissions: 'public',
+                execute: this.sendWithTyping.bind(this)
             }
         ];
 
@@ -402,4 +423,49 @@ async runShell(msg, params, context) {
     }
 }
 
+    async requestResend(msg, params, context) {
+        const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        if (!quotedMsg) {
+            return '❌ Please reply to a message to request resend.';
+        }
+
+        try {
+            const messageId = await this.bot.requestPlaceholderResend(msg.message.extendedTextMessage.contextInfo);
+            return `✅ Requested placeholder resend. Message ID: ${messageId}`;
+        } catch (error) {
+            return `❌ Failed to request resend: ${error.message}`;
+        }
+    }
+
+    async fetchHistory(msg, params, context) {
+        const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        if (!quotedMsg) {
+            return '❌ Please reply to a message to fetch history.';
+        }
+
+        const count = parseInt(params[0]) || 50;
+        const contextInfo = msg.message.extendedTextMessage.contextInfo;
+
+        try {
+            const messageId = await this.bot.fetchMessageHistory(count, contextInfo, contextInfo.quotedMessage.messageTimestamp);
+            return `✅ Requested ${count} messages history. Request ID: ${messageId}`;
+        } catch (error) {
+            return `❌ Failed to fetch history: ${error.message}`;
+        }
+    }
+
+    async sendWithTyping(msg, params, context) {
+        if (params.length === 0) {
+            return '❌ Usage: `.typing <message>`';
+        }
+
+        const message = params.join(' ');
+        
+        try {
+            await this.bot.sendMessageWithTyping(context.sender, { text: message });
+            return ''; // No response needed as message was sent
+        } catch (error) {
+            return `❌ Failed to send message with typing: ${error.message}`;
+        }
+    }
 module.exports = CoreModule;

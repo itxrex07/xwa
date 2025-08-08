@@ -121,21 +121,20 @@ class DownloaderModule {
             const buffer = await response.arrayBuffer();
             const bufferData = Buffer.from(buffer);
 
-            let message;
             if (type === 'video') {
-                message = {
+                return {
                     video: bufferData,
                     caption: caption,
                     mimetype: 'video/mp4'
                 };
             } else if (type === 'audio') {
-                message = {
+                return {
                     audio: bufferData,
                     caption: caption,
                     mimetype: 'audio/mpeg'
                 };
             } else if (type === 'image') {
-                message = {
+                return {
                     image: bufferData,
                     caption: caption,
                     mimetype: 'image/jpeg'
@@ -143,12 +142,9 @@ class DownloaderModule {
             } else {
                 throw new Error('Unsupported media type');
             }
-
-            await this.bot.sendMessage(msg.key.remoteJid, message);
-            return ''; // No text response needed since media is sent
         } catch (error) {
             console.error(`Error sending ${type}:`, error);
-            return `${caption}\n\n*Failed to send media, here's the URL instead:* ${mediaUrl}`;
+            throw new Error(`Failed to download media: ${error.message}`);
         }
     }
 
