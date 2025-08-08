@@ -22,10 +22,6 @@ class CoreModule {
                 usage: '.ping',
                 permissions: 'public',
                 aliases: ['p'],
-                ui: {
-                    processingText: '🏓 *Pinging...*',
-                    errorText: '❌ Failed to ping'
-                },
                 execute: this.ping.bind(this)
             },
             {
@@ -34,10 +30,6 @@ class CoreModule {
                 usage: '.status',
                 permissions: 'public',
                 aliases: ['stats', 'info'],
-                ui: {
-                    processingText: '📊 Gathering status...',
-                    errorText: '❌ Failed to retrieve status'
-                },
                 execute: this.status.bind(this)
             },
             {
@@ -52,10 +44,6 @@ class CoreModule {
                 description: 'Restart the bot (owner only)',
                 usage: '.restart',
                 permissions: 'owner',
-                ui: {
-                    processingText: '🔄 Restarting bot...',
-                    errorText: '❌ Restart failed'
-                },
                 execute: this.restart.bind(this)
             },
             {
@@ -70,10 +58,6 @@ class CoreModule {
                 description: 'Toggle bot mode',
                 usage: '.mode [public|private]',
                 permissions: 'owner',
-                ui: {
-                    processingText: '⚙️ Toggling mode...',
-                    errorText: '❌ Mode change failed'
-                },
                 execute: this.toggleMode.bind(this)
             },
             {
@@ -81,10 +65,6 @@ class CoreModule {
                 description: 'Ban a user',
                 usage: '.ban <number>',
                 permissions: 'owner',
-                ui: {
-                    processingText: '🚫 Banning user...',
-                    errorText: '❌ Failed to ban user'
-                },
                 execute: this.banUser.bind(this)
             },
             {
@@ -92,10 +72,6 @@ class CoreModule {
                 description: 'Unban a user',
                 usage: '.unban <number>',
                 permissions: 'owner',
-                ui: {
-                    processingText: '✅ Unbanning user...',
-                    errorText: '❌ Failed to unban user'
-                },
                 execute: this.unbanUser.bind(this)
             },
             {
@@ -103,10 +79,6 @@ class CoreModule {
                 description: 'Broadcast message to all chats',
                 usage: '.broadcast <message>',
                 permissions: 'owner',
-                ui: {
-                    processingText: '📢 Sending broadcast...',
-                    errorText: '❌ Broadcast failed'
-                },
                 execute: this.broadcast.bind(this)
             },
             {
@@ -114,10 +86,6 @@ class CoreModule {
                 description: 'Pull latest updates from Git',
                 usage: '.update',
                 permissions: 'owner',
-                ui: {
-                    processingText: '📥 Updating code...',
-                    errorText: '❌ Update failed'
-                },
                 execute: this.updateCode.bind(this)
             },
             {
@@ -125,10 +93,6 @@ class CoreModule {
                 description: 'Execute a shell command',
                 usage: '.sh <command>',
                 permissions: 'owner',
-                ui: {
-                    processingText: '🖥️ Running shell command...',
-                    errorText: '❌ Shell command failed'
-                },
                 execute: this.runShell.bind(this)
             },
             {
@@ -159,11 +123,18 @@ class CoreModule {
     }
 
 async ping(msg, params, context) {
+    if (context.isOwner) {
+        await context.bot.sock.sendMessage(context.sender, {
+            text: '🏓 *Pinging...*',
+            edit: msg.key
+        });
+    }
+    
     const start = Date.now();
     this.incrementCommandCount('ping');
     await new Promise(resolve => setTimeout(resolve, 0)); 
     const latency = Date.now() - start;
-    return ` *Pong!* • ${latency}ms`;
+    return `🏓 *Pong!* • ${latency}ms`;
 }
 
     async status(msg, params, context) {

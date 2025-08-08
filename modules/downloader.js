@@ -24,10 +24,6 @@ class DownloaderModule {
                 description: 'Downloads a TikTok video.',
                 usage: '.tiktok <url>',
                 permissions: 'public',
-                ui: {
-                    processingText: '⏳ *Processing TikTok Download...*\n\n🔄 Working on your request...',
-                    errorText: '❌ *TikTok Download Failed*'
-                },
                 execute: this.downloadTikTok.bind(this)
             },
             {
@@ -35,10 +31,6 @@ class DownloaderModule {
                 description: 'Downloads Instagram content (post or story).',
                 usage: '.instagram <url>',
                 permissions: 'public',
-                ui: {
-                    processingText: '⏳ *Processing Instagram Download...*\n\n🔄 Working on your request...',
-                    errorText: '❌ *Instagram Download Failed*'
-                },
                 execute: this.downloadInstagram.bind(this)
             },
             {
@@ -46,10 +38,6 @@ class DownloaderModule {
                 description: 'Downloads a track from SoundCloud.',
                 usage: '.soundcloud <url>',
                 permissions: 'public',
-                ui: {
-                    processingText: '⏳ *Processing SoundCloud Download...*\n\n🔄 Working on your request...',
-                    errorText: '❌ *SoundCloud Download Failed*'
-                },
                 execute: this.downloadSoundCloud.bind(this)
             },
             {
@@ -57,10 +45,6 @@ class DownloaderModule {
                 description: 'Downloads a video from Twitter / X.com.',
                 usage: '.twitter <url>',
                 permissions: 'public',
-                ui: {
-                    processingText: '⏳ *Processing Twitter Download...*\n\n🔄 Working on your request...',
-                    errorText: '❌ *Twitter Download Failed*'
-                },
                 execute: this.downloadTwitter.bind(this)
             },
 
@@ -69,10 +53,6 @@ class DownloaderModule {
                 description: 'Downloads a video from Facebook.',
                 usage: '.facebook <url>',
                 permissions: 'public',
-                ui: {
-                    processingText: '⏳ *Processing Facebook Download...*\n\n🔄 Working on your request...',
-                    errorText: '❌ *Facebook Download Failed*'
-                },
                 execute: this.downloadFacebook.bind(this)
             }
 
@@ -163,6 +143,14 @@ class DownloaderModule {
         const url = params[0];
         if (!url) return 'Please provide a TikTok URL.';
 
+        // Show processing message for owner
+        if (msg.key.fromMe) {
+            await this.bot.sock.sendMessage(msg.key.remoteJid, {
+                text: '⏳ *Processing TikTok Download...*\n\n🔄 Working on your request...',
+                edit: msg.key
+            });
+        }
+
         const result = await this._fetchDownload('tiktok', url);
         const data = result.data;
 
@@ -181,7 +169,8 @@ class DownloaderModule {
                        `*◦ Duration:* ${data.music.duration}s`;
 
         const mediaUrl = data.meta.media[0].hd || data.meta.media[0].org;
-        return this._downloadAndSendMedia(msg, mediaUrl, caption, 'video');
+        await this._downloadAndSendMedia(msg, mediaUrl, caption, 'video');
+        return ''; // Don't return text since media was sent
     }
 
     /**
@@ -193,6 +182,14 @@ class DownloaderModule {
     async downloadInstagram(msg, params) {
         const url = params[0];
         if (!url) return 'Please provide an Instagram URL.';
+
+        // Show processing message for owner
+        if (msg.key.fromMe) {
+            await this.bot.sock.sendMessage(msg.key.remoteJid, {
+                text: '⏳ *Processing Instagram Download...*\n\n🔄 Working on your request...',
+                edit: msg.key
+            });
+        }
 
         const endpoint = url.includes('/stories/') ? 'igstories' : 'instagram';
         const result = await this._fetchDownload(endpoint, url);
@@ -210,6 +207,14 @@ class DownloaderModule {
         const url = params[0];
         if (!url) return 'Please provide a SoundCloud URL.';
 
+        // Show processing message for owner
+        if (msg.key.fromMe) {
+            await this.bot.sock.sendMessage(msg.key.remoteJid, {
+                text: '⏳ *Processing SoundCloud Download...*\n\n🔄 Working on your request...',
+                edit: msg.key
+            });
+        }
+
         const result = await this._fetchDownload('soundcloud', url);
         const res = result.data;
 
@@ -220,7 +225,8 @@ class DownloaderModule {
                        `*◦ Likes:* ${this._convertMiles(res.likes)}\n` +
                        `*◦ Comments:* ${this._convertMiles(res.comments)}`;
 
-        return this._downloadAndSendMedia(msg, res.download, caption, 'audio');
+        await this._downloadAndSendMedia(msg, res.download, caption, 'audio');
+        return ''; // Don't return text since media was sent
     }
 
 
@@ -233,6 +239,14 @@ class DownloaderModule {
     async downloadFacebook(msg, params) {
         const url = params[0];
         if (!url) return 'Please provide a Facebook URL.';
+
+        // Show processing message for owner
+        if (msg.key.fromMe) {
+            await this.bot.sock.sendMessage(msg.key.remoteJid, {
+                text: '⏳ *Processing Facebook Download...*\n\n🔄 Working on your request...',
+                edit: msg.key
+            });
+        }
 
         try {
             const result = await this._fetchDownload('facebook', url);
@@ -249,7 +263,8 @@ class DownloaderModule {
                 throw new Error('No valid media URL found in API response');
             }
 
-            return this._downloadAndSendMedia(msg, mediaUrl, caption, 'video');
+            await this._downloadAndSendMedia(msg, mediaUrl, caption, 'video');
+            return ''; // Don't return text since media was sent
         } catch (error) {
             return `❌ Failed to download Facebook video: ${error.message}`;
         }
@@ -264,6 +279,14 @@ class DownloaderModule {
 async downloadTwitter(msg, params) {
     const url = params[0];
     if (!url) return 'Please provide a Twitter/X URL.';
+    
+    // Show processing message for owner
+    if (msg.key.fromMe) {
+        await this.bot.sock.sendMessage(msg.key.remoteJid, {
+            text: '⏳ *Processing Twitter Download...*\n\n🔄 Working on your request...',
+            edit: msg.key
+        });
+    }
     
     try {
         const result = await this._fetchDownload('twitterv2', url);
@@ -284,14 +307,17 @@ async downloadTwitter(msg, params) {
         // Handle different media types
         if (media.type === 'video' && media.videos && media.videos.length > 0) {
             const bestVideo = media.videos[media.videos.length - 1]; // Get the last (highest quality) video
-            return this._downloadAndSendMedia(msg, bestVideo.url, caption, 'video');
+            await this._downloadAndSendMedia(msg, bestVideo.url, caption, 'video');
+            return ''; // Don't return text since media was sent
         } 
         else if (media.type === 'photo' && media.image) {
-            return this._downloadAndSendMedia(msg, media.image, caption, 'image');
+            await this._downloadAndSendMedia(msg, media.image, caption, 'image');
+            return ''; // Don't return text since media was sent
         }
         else if (media.type === 'gif' && media.videos && media.videos.length > 0) {
             const gifVideo = media.videos[0];
-            return this._downloadAndSendMedia(msg, gifVideo.url, caption, 'video');
+            await this._downloadAndSendMedia(msg, gifVideo.url, caption, 'video');
+            return ''; // Don't return text since media was sent
         }
         else {
             return 'Unsupported media type or media not available.';

@@ -125,6 +125,7 @@ async handleCommand(msg, text) {
     const sender = msg.key.remoteJid;
     const participant = msg.key.participant || sender;
     const prefix = config.get('bot.prefix');
+    const isOwner = msg.key.fromMe || participant === config.get('bot.owner');
 
     const args = text.slice(prefix.length).trim().split(/\s+/);
     const command = args[0].toLowerCase();
@@ -154,51 +155,71 @@ if (!this.checkPermissions(msg, command)) {
     const respondToUnknown = config.get('features.respondToUnknownCommands', false);
 
     if (handler) {
-    // Always add ⏳ reaction for ALL commands
-    await this.bot.sock.sendMessage(sender, {
-        react: { key: msg.key, text: '⏳' }
-    });
-
-    try {
-        await handler.execute(msg, params, {
-            bot: this.bot,
-            sender,
-            participant,
-            isGroup: sender.endsWith('@g.us')
-        });
-
-        // Clear reaction on success for ALL commands
-        await this.bot.sock.sendMessage(sender, {
-            react: { key: msg.key, text: '' }
-        });
-
-        logger.info(`✅ Command executed: ${command} by ${participant}`);
-
-        if (this.bot.telegramBridge) {
-            await this.bot.telegramBridge.logToTelegram('📝 Command Executed',
-                `Command: ${command}\nUser: ${participant}\nChat: ${sender}`);
-        }
-
-    } catch (error) {
-        // Keep ❌ reaction on error (don't clear it)
-        await this.bot.sock.sendMessage(sender, {
-            react: { key: msg.key, text: '❌' }
-        });
-
-        logger.error(`❌ Command failed: ${command} | ${error.message || 'No message'}`);
-        logger.debug(error.stack || error);
-
-        if (!error._handledBySmartError && error?.message) {
-            await this.bot.sendMessage(sender, {
-                text: `❌ Command failed: ${error.message}`
+        // Only add reaction for owner commands
+        if (isOwner) {
+            await this.bot.sock.sendMessage(sender, {
+                react: { key: msg.key, text: '⏳' }
             });
         }
 
-        if (this.bot.telegramBridge) {
-            await this.bot.telegramBridge.logToTelegram('❌ Command Error',
-                `Command: ${command}\nError: ${error.message}\nUser: ${participant}`);
+        try {
+            const result = await handler.execute(msg, params, {
+                bot: this.bot,
+                sender,
+                participant,
+                isGroup: sender.endsWith('@g.us'),
+                isOwner
+            });
+
+            // Handle result for owner commands
+            if (isOwner && typeof result === 'string' && result.trim()) {
+                await this.bot.sock.sendMessage(sender, {
+                    text: result,
+                    edit: msg.key
+                });
+            } else if (typeof result === 'string' && result.trim()) {
+                await this.bot.sendMessage(sender, { text: result });
+            }
+
+            // Clear reaction on success for owner commands
+            if (isOwner) {
+                await this.bot.sock.sendMessage(sender, {
+                    react: { key: msg.key, text: '' }
+                });
+            }
+
+            logger.info(`✅ Command executed: ${command} by ${participant}`);
+
+            if (this.bot.telegramBridge) {
+                await this.bot.telegramBridge.logToTelegram('📝 Command Executed',
+                    `Command: ${command}\nUser: ${participant}\nChat: ${sender}`);
+            }
+
+        } catch (error) {
+            // Handle error for owner commands
+            if (isOwner) {
+                await this.bot.sock.sendMessage(sender, {
+                    react: { key: msg.key, text: '❌' }
+                });
+                
+                await this.bot.sock.sendMessage(sender, {
+                    text: `❌ Command failed: ${error.message}`,
+                    edit: msg.key
+                });
+            } else {
+                await this.bot.sendMessage(sender, {
+                    text: `❌ Command failed: ${error.message}`
+                });
+            }
+
+            logger.error(`❌ Command failed: ${command} | ${error.message || 'No message'}`);
+            logger.debug(error.stack || error);
+
+            if (this.bot.telegramBridge) {
+                await this.bot.telegramBridge.logToTelegram('❌ Command Error',
+                    `Command: ${command}\nError: ${error.message}\nUser: ${participant}`);
+            }
         }
-    }
 
 
     } else if (respondToUnknown) {

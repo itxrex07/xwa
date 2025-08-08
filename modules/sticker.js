@@ -21,10 +21,6 @@ class StickerModule {
                 usage: '.sticker (reply to image/video)',
                 aliases: ['s'],
                 permissions: 'public',
-                ui: {
-                    processingText: '🎨 *Creating Sticker...*\n\n⏳ Converting to sticker format...',
-                    errorText: '❌ *Sticker Creation Failed*'
-                },
                 execute: this.createSticker.bind(this)
             },
             {
@@ -32,10 +28,6 @@ class StickerModule {
                 description: 'Create sticker from text',
                 usage: '.textsticker <text>',
                 permissions: 'public',
-                ui: {
-                    processingText: '📝 *Creating Text Sticker...*\n\n⏳ Generating sticker from text...',
-                    errorText: '❌ *Text Sticker Creation Failed*'
-                },
                 execute: this.createTextSticker.bind(this)
             },
             {
@@ -43,10 +35,6 @@ class StickerModule {
                 description: 'Create animated sticker from video/GIF',
                 usage: '.anim (reply to video/GIF)',
                 permissions: 'public',
-                ui: {
-                    processingText: '🎬 *Creating Animated Sticker...*\n\n⏳ Processing animation...',
-                    errorText: '❌ *Animated Sticker Creation Failed*'
-                },
                 execute: this.createAnimatedSticker.bind(this)
             },
             {
@@ -54,10 +42,6 @@ class StickerModule {
                 description: 'Steal sticker and recreate with custom metadata',
                 usage: '.steal <pack_name> | <author> (reply to sticker)',
                 permissions: 'public',
-                ui: {
-                    processingText: '🕵️ *Stealing Sticker...*\n\n⏳ Recreating with new metadata...',
-                    errorText: '❌ *Sticker Stealing Failed*'
-                },
                 execute: this.stealSticker.bind(this)
             }
         ];
@@ -74,6 +58,14 @@ class StickerModule {
         
         if (!quotedMsg) {
             return '❌ *Sticker Creation*\n\nPlease reply to an image or video to create a sticker.\n\n💡 Usage: Reply to media and type `.sticker` or `.s`';
+        }
+
+        // Show processing message for owner
+        if (context.isOwner) {
+            await context.bot.sock.sendMessage(context.sender, {
+                text: '🎨 *Creating Sticker...*\n\n⏳ Converting to sticker format...',
+                edit: msg.key
+            });
         }
 
         try {
@@ -116,7 +108,11 @@ class StickerModule {
                 sticker: stickerBuffer
             });
 
-            return `✅ *Sticker Created Successfully*\n\n🎨 Type: ${mediaType.toUpperCase()}\n📦 Pack: HyperWa Stickers\n⏰ ${new Date().toLocaleTimeString()}`;
+            // Only return text for non-owner users
+            if (!context.isOwner) {
+                return `✅ *Sticker Created Successfully*\n\n🎨 Type: ${mediaType.toUpperCase()}\n📦 Pack: HyperWa Stickers\n⏰ ${new Date().toLocaleTimeString()}`;
+            }
+            return ''; // Don't return text for owner since sticker was sent
 
         } catch (error) {
             throw new Error(`Sticker creation failed: ${error.message}`);
