@@ -222,6 +222,7 @@ class HyperWaBot {
             logger: logger.child({ module: 'baileys' }),
             getMessage: async (key) => {
                 // Try to get message from store first
+            }
             getMessage: this.getMessage.bind(this),
             browser: ['HyperWa', 'Chrome', '3.0'],
             // Add connection options for stability
