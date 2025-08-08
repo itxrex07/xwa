@@ -1,3 +1,4 @@
+
 class SpotifyModule {
     /**
      * Constructor for the SpotifyModule.
@@ -77,15 +78,18 @@ class SpotifyModule {
             const buffer = await response.arrayBuffer();
             const bufferData = Buffer.from(buffer);
 
-            return {
+            const message = {
                 audio: bufferData,
                 caption: caption,
                 mimetype: 'audio/mpeg',
                 ptt: false // Set to true if you want it as voice note
             };
+
+            await this.bot.sendMessage(msg.key.remoteJid, message);
+            return ''; // No text response needed since media is sent
         } catch (error) {
             console.error('Error sending audio:', error);
-            throw new Error(`Failed to download audio: ${error.message}`);
+            return `${caption}\n\n*Failed to send audio, here's the URL instead:* ${mediaUrl}`;
         }
     }
 
