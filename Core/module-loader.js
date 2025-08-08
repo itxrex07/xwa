@@ -424,39 +424,19 @@ await context.bot.sendMessage(context.sender, { text: helpText.trim() });
                     const ui = cmd.ui || {};
 
                     // Only wrap commands that have UI config (structured modules)
-                    const shouldWrap = cmd.ui && (cmd.autoWrap !== false);
-                    const wrappedCmd = shouldWrap ? {
-                        ...cmd,
-                        execute: async (msg, params, context) => {
-                            // Check if this is a media command (has media-related keywords)
-                            const isMediaCommand = cmd.name.includes('download') || 
-                                                 cmd.name.includes('dl') || 
-                                                 cmd.name.includes('spotify') || 
-                                                 cmd.name.includes('youtube') || 
-                                                 cmd.name.includes('tiktok') ||
-                                                 cmd.name.includes('instagram') ||
-                                                 cmd.name.includes('sticker') ||
-                                                 cmd.category === 'media';
-
-                            if (isMediaCommand) {
-                                await helpers.smartMediaRespond(context.bot, msg, {
-                                    processingText: ui.processingText || `⏳ Running *${cmd.name}*...`,
-                                    errorText: ui.errorText || `❌ *${cmd.name}* failed.`,
-                                    actionFn: async () => {
-                                        return await cmd.execute(msg, params, context);
-                                    }
-                                });
-                            } else {
-                                await helpers.smartErrorRespond(context.bot, msg, {
-                                    processingText: ui.processingText || `⏳ Running *${cmd.name}*...`,
-                                    errorText: ui.errorText || `❌ *${cmd.name}* failed.`,
-                                    actionFn: async () => {
-                                        return await cmd.execute(msg, params, context);
-                                    }
-                                });
-                            }
-                        }
-                    } : cmd; // Use original command without wrapping
+const shouldWrap = cmd.ui && (cmd.autoWrap !== false);
+const wrappedCmd = shouldWrap ? {
+    ...cmd,
+    execute: async (msg, params, context) => {
+        await helpers.smartErrorRespond(context.bot, msg, {
+            processingText: ui.processingText || `⏳ Running *${cmd.name}*...`,
+            errorText: ui.errorText || `❌ *${cmd.name}* failed.`,
+            actionFn: async () => {
+                return await cmd.execute(msg, params, context);
+            }
+        });
+    }
+} : cmd; // Use original command without wrapping
 
 
                     this.bot.messageHandler.registerCommandHandler(cmd.name, wrappedCmd);
